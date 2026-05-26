@@ -1,16 +1,23 @@
+import os
 import pandas as pd
 import joblib
 import mlflow
 import mlflow.sklearn
 
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LinearRegression
 from sklearn.metrics import (
-    accuracy_score,
-    precision_score,
-    recall_score,
-    f1_score
+    mean_absolute_error,
+    mean_squared_error,
+    r2_score
 )
+from sklearn.preprocessing import LabelEncoder
+
+# ─────────────────────────────────────────────────────────────
+# Create Models Directory
+# ─────────────────────────────────────────────────────────────
+
+os.makedirs("models", exist_ok=True)
 
 # ─────────────────────────────────────────────────────────────
 # Load Dataset
@@ -27,12 +34,29 @@ X = df.drop("final_score", axis=1)
 y = df["final_score"]
 
 # ─────────────────────────────────────────────────────────────
+# Encode Categorical Columns
+# ─────────────────────────────────────────────────────────────
+
+label_encoders = {}
+
+for column in X.select_dtypes(include=["object"]).columns:
+
+    le = LabelEncoder()
+
+    X[column] = le.fit_transform(X[column])
+
+    label_encoders[column] = le
+
+# ─────────────────────────────────────────────────────────────
 # Save Feature Columns
 # ─────────────────────────────────────────────────────────────
 
 joblib.dump(
+
     list(X.columns),
+
     "models/feature_columns.pkl"
+
 )
 
 # ─────────────────────────────────────────────────────────────
@@ -56,7 +80,11 @@ X_train, X_test, y_train, y_test = train_test_split(
 
 mlflow.set_tracking_uri("sqlite:///mlflow.db")
 
-mlflow.set_experiment("student-performance-prediction")
+mlflow.set_experiment(
+
+    "student-performance-prediction"
+
+)
 
 # ─────────────────────────────────────────────────────────────
 # Start MLflow Run
@@ -68,14 +96,10 @@ with mlflow.start_run():
     # Model
     # ─────────────────────────────────────────────────────────
 
-    model = LogisticRegression(
-
-        max_iter=1000
-
-    )
+    model = LinearRegression()
 
     # ─────────────────────────────────────────────────────────
-    # Train
+    # Train Model
     # ─────────────────────────────────────────────────────────
 
     model.fit(
@@ -86,49 +110,35 @@ with mlflow.start_run():
     )
 
     # ─────────────────────────────────────────────────────────
-    # Predict
+    # Predictions
     # ─────────────────────────────────────────────────────────
 
     y_pred = model.predict(X_test)
 
     # ─────────────────────────────────────────────────────────
-    # Metrics
+    # Regression Metrics
     # ─────────────────────────────────────────────────────────
 
-    accuracy = accuracy_score(
+    mae = mean_absolute_error(
 
         y_test,
         y_pred
 
     )
 
-    precision = precision_score(
+    mse = mean_squared_error(
 
         y_test,
-        y_pred,
-
-        average="weighted",
-        zero_division=0
+        y_pred
 
     )
 
-    recall = recall_score(
+    rmse = mse ** 0.5
+
+    r2 = r2_score(
 
         y_test,
-        y_pred,
-
-        average="weighted",
-        zero_division=0
-
-    )
-
-    f1 = f1_score(
-
-        y_test,
-        y_pred,
-
-        average="weighted",
-        zero_division=0
+        y_pred
 
     )
 
@@ -139,14 +149,21 @@ with mlflow.start_run():
     mlflow.log_param(
 
         "model_type",
-        "LogisticRegression"
+        "LinearRegression"
 
     )
 
     mlflow.log_param(
 
-        "max_iter",
-        1000
+        "test_size",
+        0.2
+
+    )
+
+    mlflow.log_param(
+
+        "random_state",
+        42
 
     )
 
@@ -156,29 +173,29 @@ with mlflow.start_run():
 
     mlflow.log_metric(
 
-        "accuracy",
-        accuracy
+        "mae",
+        mae
 
     )
 
     mlflow.log_metric(
 
-        "precision",
-        precision
+        "mse",
+        mse
 
     )
 
     mlflow.log_metric(
 
-        "recall",
-        recall
+        "rmse",
+        rmse
 
     )
 
     mlflow.log_metric(
 
-        "f1_score",
-        f1
+        "r2_score",
+        r2
 
     )
 
@@ -189,23 +206,25 @@ with mlflow.start_run():
     joblib.dump(
 
         model,
+
         "models/model.pkl"
 
     )
 
     # ─────────────────────────────────────────────────────────
-    # Log Model Artifact
+    # Log MLflow Model
     # ─────────────────────────────────────────────────────────
 
     mlflow.sklearn.log_model(
 
         model,
-        "model"
+
+        artifact_path="model"
 
     )
 
     # ─────────────────────────────────────────────────────────
-    # Log Artifact Files
+    # Log Artifacts
     # ─────────────────────────────────────────────────────────
 
     mlflow.log_artifact(
@@ -221,19 +240,19 @@ with mlflow.start_run():
     )
 
 # ─────────────────────────────────────────────────────────────
-# Print Results
+# Final Output
 # ─────────────────────────────────────────────────────────────
 
-print("✅ Model Training Completed")
+print("\n✅ Model Training Completed")
 
-print(f"Accuracy : {accuracy:.4f}")
+print(f"\nMAE  : {mae:.4f}")
 
-print(f"Precision: {precision:.4f}")
+print(f"MSE  : {mse:.4f}")
 
-print(f"Recall   : {recall:.4f}")
+print(f"RMSE : {rmse:.4f}")
 
-print(f"F1 Score : {f1:.4f}")
+print(f"R²   : {r2:.4f}")
 
-print("✅ MLflow Logging Completed")
+print("\n✅ MLflow Logging Completed")
 
 print("✅ Model Saved -> models/model.pkl")

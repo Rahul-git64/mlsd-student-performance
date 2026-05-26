@@ -38,3 +38,6 @@ Thumbs.db
 
 # Docker
 *.tar
+
+mlflow.db
+mlruns/
