@@ -254,5 +254,5 @@ print(f"RMSE : {rmse:.4f}")
 print(f"R²   : {r2:.4f}")
 
 print("\n✅ MLflow Logging Completed")
-
+    
 print("✅ Model Saved -> models/model.pkl")

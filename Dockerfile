@@ -3,10 +3,14 @@ FROM python:3.9-slim
 WORKDIR /app
 
 COPY requirements.txt .
+
 RUN pip install -r requirements.txt
 
 COPY app.py .
-COPY model.pkl .
+
+COPY models/model.pkl models/model.pkl
+
+COPY models/feature_columns.pkl models/feature_columns.pkl
 
 EXPOSE 8501
 

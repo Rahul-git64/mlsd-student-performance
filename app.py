@@ -1,109 +1,192 @@
 import streamlit as st
 import pandas as pd
 import joblib
-import time
+import numpy as np
 
 # ─────────────────────────────────────────────────────────────
-# Load Model
+# Load Model and Feature Columns
 # ─────────────────────────────────────────────────────────────
 
-model = joblib.load("models/student_model.pkl")
-feature_columns = joblib.load("models/feature_columns.pkl")
+model = joblib.load("models/model.pkl")
+
+feature_columns = joblib.load(
+
+    "models/feature_columns.pkl"
+
+)
 
 # ─────────────────────────────────────────────────────────────
-# Streamlit UI
+# Streamlit Page Config
 # ─────────────────────────────────────────────────────────────
 
 st.set_page_config(
+
     page_title="Student Performance Predictor",
+
     page_icon="🎓",
+
     layout="centered"
+
 )
-
-st.title("🎓 Student Performance Prediction")
-
-st.write("Enter student details below.")
 
 # ─────────────────────────────────────────────────────────────
-# Inputs
+# Title
 # ─────────────────────────────────────────────────────────────
 
-study_hours = st.slider("Study Hours", 0, 12, 5)
+st.title("🎓 Student Performance Predictor")
 
-attendance_pct = st.slider("Attendance %", 0, 100, 80)
+st.markdown(
 
-prev_gpa = st.slider("Previous GPA", 0.0, 4.0, 3.0)
+    "Predict final student score using machine learning."
 
-assignments_done = st.slider("Assignments Done %", 0, 100, 75)
-
-sleep_hours = st.slider("Sleep Hours", 0, 12, 7)
-
-internet_hours = st.slider("Internet Hours", 0, 12, 3)
-
-family_support = st.slider("Family Support", 0, 5, 3)
-
-part_time_job = st.selectbox(
-    "Part Time Job",
-    [0, 1]
 )
 
-extracurricular = st.selectbox(
-    "Extracurricular Activities",
-    [0, 1]
+# ─────────────────────────────────────────────────────────────
+# User Inputs
+# ─────────────────────────────────────────────────────────────
+
+study_hours = st.number_input(
+
+    "Study Hours",
+
+    min_value=0.0,
+
+    max_value=24.0,
+
+    value=5.0
+
 )
 
-parent_edu = st.slider("Parent Education Level", 0, 5, 2)
+attendance = st.number_input(
 
-gender = st.selectbox(
-    "Gender",
-    [0, 1]
+    "Attendance Percentage",
+
+    min_value=0.0,
+
+    max_value=100.0,
+
+    value=80.0
+
 )
 
-school_type = st.selectbox(
-    "School Type",
-    [0, 1]
+assignments_completed = st.number_input(
+
+    "Assignments Completed (%)",
+
+    min_value=0.0,
+
+    max_value=100.0,
+
+    value=75.0
+
 )
 
-distance_km = st.slider("Distance from School (km)", 0, 50, 5)
+sleep_hours = st.number_input(
 
-quiz_avg = st.slider("Quiz Average", 0, 100, 70)
+    "Sleep Hours",
 
-midterm_score = st.slider("Midterm Score", 0, 100, 75)
+    min_value=0.0,
+
+    max_value=24.0,
+
+    value=7.0
+
+)
+
+previous_gpa = st.number_input(
+
+    "Previous GPA",
+
+    min_value=0.0,
+
+    max_value=10.0,
+
+    value=7.5
+
+)
+
+internet_usage = st.number_input(
+
+    "Internet Usage Hours",
+
+    min_value=0.0,
+
+    max_value=24.0,
+
+    value=3.0
+
+)
+
+# ─────────────────────────────────────────────────────────────
+# Create Input DataFrame
+# ─────────────────────────────────────────────────────────────
+
+input_data = pd.DataFrame(
+
+    [[
+
+        study_hours,
+        attendance,
+        assignments_completed,
+        sleep_hours,
+        previous_gpa,
+        internet_usage
+
+    ]],
+
+    columns=[
+
+        "study_hours",
+        "attendance_percentage",
+        "assignments_completed_percentage",
+        "sleep_hours",
+        "previous_gpa",
+        "internet_usage_hours"
+
+    ]
+
+)
+
+# ─────────────────────────────────────────────────────────────
+# Align Features
+# ─────────────────────────────────────────────────────────────
+
+for column in feature_columns:
+
+    if column not in input_data.columns:
+
+        input_data[column] = 0
+
+input_data = input_data[feature_columns]
 
 # ─────────────────────────────────────────────────────────────
 # Prediction
 # ─────────────────────────────────────────────────────────────
 
-if st.button("Predict"):
-
-    start = time.time()
-
-    input_data = pd.DataFrame([{
-
-        "study_hours": study_hours,
-        "attendance_pct": attendance_pct,
-        "prev_gpa": prev_gpa,
-        "assignments_done": assignments_done,
-        "sleep_hours": sleep_hours,
-        "internet_hours": internet_hours,
-        "family_support": family_support,
-        "part_time_job": part_time_job,
-        "extracurricular": extracurricular,
-        "parent_edu": parent_edu,
-        "gender": gender,
-        "school_type": school_type,
-        "distance_km": distance_km,
-        "quiz_avg": quiz_avg,
-        "midterm_score": midterm_score
-
-    }])
-
-    input_data = input_data[feature_columns[:-1]]
+if st.button("Predict Final Score"):
 
     prediction = model.predict(input_data)[0]
 
-    elapsed = time.time() - start
+    st.success(
 
-    st.success(f"Predicted Score: {prediction:.2f}")
+        f"Predicted Final Score: {prediction:.2f}"
 
-    st.info(f"Inference Time: {elapsed:.4f} sec")
+    )
+
+    # Optional Interpretation
+
+    if prediction >= 90:
+
+        st.info("Excellent Performance 🚀")
+
+    elif prediction >= 75:
+
+        st.info("Good Performance 👍")
+
+    elif prediction >= 50:
+
+        st.warning("Average Performance ⚠️")
+
+    else:
+
+        st.error("Needs Improvement 📚")
